@@ -18,6 +18,11 @@ type engineNumber struct {
 	line         int
 }
 
+type gear struct {
+	numbers []int
+	ratio   int
+}
+
 // read each line of file and add to a slice
 func readLines(filename string) ([]string, error) {
 	lines := make([]string, 0)
@@ -144,13 +149,8 @@ func isPartNumber(eNbr engineNumber, symbolsMatrix map[int]map[int]string) bool 
 	return false
 }
 
-func getEnginPartNumbers(lines []string) ([]int, error) {
+func getEnginPartNumbers(lines []string, symbols map[int]map[int]string, numbers []engineNumber) ([]int, error) {
 	var partNumbers []int
-	symbols := findEngineSymbols(lines)
-	numbers, err := findEngineNumbers(lines)
-	if err != nil {
-		return []int{}, err
-	}
 
 	for _, nb := range numbers {
 		if isPartNumber(nb, symbols) {
@@ -171,6 +171,75 @@ func sumInts(ints []int) int {
 	return sum
 }
 
+func filterPositiveNumbers(arr []int) []int {
+	var result []int
+
+	for _, num := range arr {
+		if num >= 0 {
+			result = append(result, num)
+		}
+	}
+
+	return result
+}
+
+func isIntInArray(target int, arr []int) bool {
+	for _, num := range arr {
+		if num == target {
+			return true
+		}
+	}
+	return false
+}
+
+func findEngineNumbersInInterval(numbers []engineNumber, possibleLines []int, possiblesIndiceInterval []int) []int {
+
+	possibleLines = filterPositiveNumbers(possibleLines)
+	var result []int
+
+	for _, number := range numbers {
+
+		if isIntInArray(number.line, possibleLines) {
+
+			if isNumberInInterval(number.startIndice, possiblesIndiceInterval) {
+				result = append(result, number.number)
+				continue
+			}
+
+			if isNumberInInterval(number.endIndice, possiblesIndiceInterval) {
+				result = append(result, number.number)
+			}
+		}
+	}
+	return result
+}
+
+func getGears(symbolsMatrix map[int]map[int]string, engineNumbers []engineNumber) []gear {
+
+	var gears []gear
+
+	// Iterate through the outer map
+	for symbolLine, indiceMap := range symbolsMatrix {
+		possibleLines := []int{symbolLine - 1, symbolLine, symbolLine + 1}
+		// Iterate through the inner map
+		for indice, symbol := range indiceMap {
+			if symbol != "*" {
+				continue
+			}
+			possiblesIndiceInterval := []int{indice - 1, indice + 1}
+			allNumbersInInterval := findEngineNumbersInInterval(engineNumbers, possibleLines, possiblesIndiceInterval)
+			if len(allNumbersInInterval) == 2 {
+				gears = append(gears, gear{
+					numbers: allNumbersInInterval,
+					ratio:   allNumbersInInterval[0] * allNumbersInInterval[1],
+				})
+			}
+		}
+	}
+
+	return gears
+}
+
 func main() {
 
 	//read input file
@@ -179,12 +248,23 @@ func main() {
 		panic(err.Error())
 	}
 
-	partNumbers, err := getEnginPartNumbers(lines)
+	symbols := findEngineSymbols(lines)
+	numbers, err := findEngineNumbers(lines)
 	if err != nil {
 		panic(err.Error())
 	}
 
-	//fmt.Println("Part numbers: ", partNumbers)
-	fmt.Println("Sum of part numbers: ", sumInts(partNumbers))
+	partNumbers, err := getEnginPartNumbers(lines, symbols, numbers)
+	if err != nil {
+		panic(err.Error())
+	}
 
+	gears := getGears(symbols, numbers)
+	var sumGearRatio int
+	for _, gear := range gears {
+		sumGearRatio += gear.ratio
+	}
+
+	fmt.Println("Part 1 - sum of part numbers: ", sumInts(partNumbers))
+	fmt.Println("Part 2 - sum of gears ratio: ", sumGearRatio)
 }

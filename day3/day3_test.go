@@ -160,6 +160,8 @@ func TestGetEnginPartNumbers(t *testing.T) {
 		lines          []string
 		expectedResult []int
 		expectedError  error
+		symbolMatrix   map[int]map[int]string
+		engineNumbers  []engineNumber
 	}{
 		{
 			[]string{
@@ -176,6 +178,22 @@ func TestGetEnginPartNumbers(t *testing.T) {
 			},
 			[]int{467, 35, 633, 617, 592, 755, 664, 598},
 			nil,
+			map[int]map[int]string{
+				1: {3: "*"},
+				3: {6: "#"},
+				4: {3: "%"},
+				5: {5: "+"},
+				8: {3: "$", 5: "/"},
+			},
+			[]engineNumber{
+				{line: 0, numberStr: "467", startIndice: 0, endIndice: 2, number: 467, isPartNumber: false}, {line: 0, numberStr: "114", startIndice: 5, endIndice: 7, number: 114, isPartNumber: false},
+				{line: 2, numberStr: "35", startIndice: 2, endIndice: 3, number: 35, isPartNumber: false}, {line: 2, numberStr: "633", startIndice: 6, endIndice: 8, number: 633, isPartNumber: false},
+				{line: 4, numberStr: "617", startIndice: 0, endIndice: 2, number: 617, isPartNumber: false},
+				{line: 5, numberStr: "58", startIndice: 7, endIndice: 8, number: 58, isPartNumber: false},
+				{line: 6, numberStr: "592", startIndice: 2, endIndice: 4, number: 592, isPartNumber: false},
+				{line: 7, numberStr: "755", startIndice: 6, endIndice: 8, number: 755, isPartNumber: false},
+				{line: 9, numberStr: "664", startIndice: 1, endIndice: 3, number: 664, isPartNumber: false}, {line: 9, numberStr: "598", startIndice: 5, endIndice: 7, number: 598, isPartNumber: false},
+			},
 		},
 		{
 			[]string{
@@ -186,6 +204,14 @@ func TestGetEnginPartNumbers(t *testing.T) {
 			},
 			[]int{982, 370},
 			nil,
+			map[int]map[int]string{
+				0: {7: "@"},
+				3: {3: "*"},
+			},
+			[]engineNumber{
+				{line: 1, numberStr: "982", startIndice: 8, endIndice: 10, number: 982, isPartNumber: false},
+				{line: 2, numberStr: "370", startIndice: 1, endIndice: 3, number: 370, isPartNumber: false},
+			},
 		},
 		{
 			[]string{
@@ -196,6 +222,13 @@ func TestGetEnginPartNumbers(t *testing.T) {
 			},
 			[]int{370},
 			nil,
+			map[int]map[int]string{
+				3: {3: "%"},
+			},
+			[]engineNumber{
+				{line: 1, numberStr: "982", startIndice: 8, endIndice: 10, number: 982, isPartNumber: false},
+				{line: 2, numberStr: "370", startIndice: 1, endIndice: 3, number: 370, isPartNumber: false},
+			},
 		},
 		{
 			[]string{
@@ -205,6 +238,10 @@ func TestGetEnginPartNumbers(t *testing.T) {
 			},
 			[]int{},
 			nil,
+			map[int]map[int]string{},
+			[]engineNumber{
+				{line: 1, numberStr: "982", startIndice: 4, endIndice: 6, number: 982, isPartNumber: false},
+			},
 		},
 		{
 			[]string{
@@ -214,12 +251,18 @@ func TestGetEnginPartNumbers(t *testing.T) {
 			},
 			[]int{9},
 			nil,
+			map[int]map[int]string{
+				2: {0: "+", 6: ")", 10: "*"},
+			},
+			[]engineNumber{
+				{line: 1, numberStr: "9", startIndice: 6, endIndice: 6, number: 9, isPartNumber: false},
+			},
 		},
 	}
 
 	// Iterate through test cases
 	for _, testCase := range testCases {
-		result, err := getEnginPartNumbers(testCase.lines)
+		result, err := getEnginPartNumbers(testCase.lines, testCase.symbolMatrix, testCase.engineNumbers)
 
 		if len(testCase.expectedResult) > 0 {
 			// Check if the result matches the expected result
@@ -250,5 +293,70 @@ func TestSumInts(t *testing.T) {
 	result := sumInts(testCases[0].ints)
 	if result != testCases[0].expectedResult {
 		t.Errorf("Expected %v, but got %v", testCases[0].expectedResult, result)
+	}
+}
+
+func TestFindEngineNumbersInInterval(t *testing.T) {
+	// Test cases
+	testCases := []struct {
+		numbers                 []engineNumber
+		possibleLines           []int
+		possiblesIndiceInterval []int
+		expectedResult          []int
+	}{
+		{
+			[]engineNumber{
+				{numberStr: "123", number: 123, startIndice: 5, endIndice: 7, line: 0},
+				{numberStr: "456", number: 456, startIndice: 9, endIndice: 11, line: 1},
+				{numberStr: "789", number: 789, startIndice: 13, endIndice: 15, line: 2},
+				{numberStr: "123", number: 123, startIndice: 6, endIndice: 8, line: 2},
+			},
+			[]int{0, 1, 2},
+			[]int{5, 6},
+			[]int{123, 123},
+		},
+	}
+
+	// Iterate through test cases
+	for _, testCase := range testCases {
+		result := findEngineNumbersInInterval(testCase.numbers, testCase.possibleLines, testCase.possiblesIndiceInterval)
+
+		// Check if the result matches the expected result
+		if !reflect.DeepEqual(result, testCase.expectedResult) {
+			t.Errorf("For numbers %v, possibleLines %v, and possiblesIndiceInterval %v, expected %v, but got %v", testCase.numbers, testCase.possibleLines, testCase.possiblesIndiceInterval, testCase.expectedResult, result)
+		}
+	}
+}
+
+func TestGetGears(t *testing.T) {
+	// Test cases
+	testCases := []struct {
+		symbolsMatrix  map[int]map[int]string
+		engineNumbers  []engineNumber
+		expectedResult []gear
+	}{
+		{
+			map[int]map[int]string{
+				0: {1: "$", 2: "*", 3: "$", 4: "&"},
+				1: {1: "/", 2: "-", 3: "=", 4: "_"},
+			},
+			[]engineNumber{
+				{numberStr: "123", number: 123, startIndice: 2, endIndice: 4, line: 0},
+				{numberStr: "456", number: 456, startIndice: 3, endIndice: 5, line: 1},
+			},
+			[]gear{
+				{numbers: []int{123, 456}, ratio: 123 * 456},
+			},
+		},
+	}
+
+	// Iterate through test cases
+	for _, testCase := range testCases {
+		result := getGears(testCase.symbolsMatrix, testCase.engineNumbers)
+
+		// Check if the result matches the expected result
+		if !reflect.DeepEqual(result, testCase.expectedResult) {
+			t.Errorf("For symbolsMatrix %v and engineNumbers %v, expected %v, but got %v", testCase.symbolsMatrix, testCase.engineNumbers, testCase.expectedResult, result)
+		}
 	}
 }
